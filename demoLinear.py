@@ -22,10 +22,11 @@ import bayesProbit
 # Experiment setup
 # Success probability model for each arm
 
-def experiment(NUM_ARMS = 3, D = 2, NUM_OBS = 100, NUM_SAMPLES = 500, NUM_BURNOUT = 200, prior_sigma = 10):
+def experiment(NUM_ARMS = 3, D = 2, NUM_OBS = 100, NUM_SAMPLES = 500, BURNOUT = 200, prior_sigma = 10):
+    # Generate the set of coefficients for each arm
     coef = np.random.randn(D,NUM_ARMS)
     print coef
-
+    # Initialize vectors
     prior = np.ones(NUM_ARMS)/float(NUM_ARMS)
     post = prior
     positives = np.zeros(NUM_ARMS)
@@ -35,11 +36,11 @@ def experiment(NUM_ARMS = 3, D = 2, NUM_OBS = 100, NUM_SAMPLES = 500, NUM_BURNOU
     random_regret = np.zeros(NUM_OBS)
     theta_mu = np.zeros(D)
     theta_sigma = prior_sigma*np.eye(D)
-
     arm_data = dict()
     for arm in range(NUM_ARMS):
         arm_data[arm] = {'feat':np.empty((D,0)),'reward':np.empty((0))}
-    
+
+    # Main loop
     for it in range(NUM_OBS):
         print "="*20
         print "Iteration %d" % it
@@ -53,26 +54,26 @@ def experiment(NUM_ARMS = 3, D = 2, NUM_OBS = 100, NUM_SAMPLES = 500, NUM_BURNOU
         # We estimate the posterior probability of each arm being the optimal one
         # for the observed feature by using samples from the posterior of the 
         # probit regression parameters
-        # Update posterior
         # We sample from the posterior of P(\theta_i|y) for each arm
         s = np.zeros((NUM_ARMS,NUM_SAMPLES-BURNOUT))
         for arm in range(NUM_ARMS):
             print 'Arm %i' % arm
-            # If we do not have any observations, sample from the prior
+            # If we do not have any observations, do some sensible initialization
             if (arm_data[arm]['feat'].shape[1]==0):
                 print 'Sampling from the prior'
-                samples = np.random.multivariate_normal(theta_mu, theta_sigma, size = NUM_SAMPLES).T
+#                samples = np.random.multivariate_normal(theta_mu, theta_sigma, size = NUM_SAMPLES).T
+                samples = np.zeros((D,NUM_SAMPLES))
             else:
-                samples = probitSample(arm_data[arm]['feat'], arm_data[arm]['reward'], theta_mu, theta_sigma, NUM_SAMPLES = NUM_SAMPLES)
+                samples = bayesProbit.gibbsSampling(arm_data[arm]['feat'], arm_data[arm]['reward'], theta_mu, theta_sigma, NUM_SAMPLES = NUM_SAMPLES)
             # Show information about the posterior based on the samples,
             # after discarding the burnout period
-            theta_mu = np.mean(samples[:,BURNOUT:], axis = 1)
-            theta_sigma = np.cov(samples[:,BURNOUT:])
+#            theta_mu = np.mean(samples[:,BURNOUT:], axis = 1)
+#            theta_sigma = np.cov(samples[:,BURNOUT:])
             print 'Real mu: ' 
             print coef[:,arm]
             print 'Estimate: '
-            print theta_mu
-            print theta_sigma
+            print np.mean(samples[:,BURNOUT:], axis = 1)
+            print np.cov(samples[:,BURNOUT:])
 
             # Project the feature point
             s[arm,:] = np.dot(feat.T,samples[:,BURNOUT])
@@ -89,11 +90,8 @@ def experiment(NUM_ARMS = 3, D = 2, NUM_OBS = 100, NUM_SAMPLES = 500, NUM_BURNOU
         # Obtain the reward
         reward = stats.bernoulli.rvs(theta[chosen_arm])    
         reward_vector[it] = reward
-        positives[chosen_arm] += reward
-        tries[chosen_arm] += 1
         arm_data[chosen_arm]['feat'] = np.hstack((arm_data[chosen_arm]['feat'],feat))
         arm_data[chosen_arm]['reward'] = np.hstack((arm_data[chosen_arm]['reward'],[reward]))
-
 
         # Report
         regret[it] = max(theta)-theta[chosen_arm]

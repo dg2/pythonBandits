@@ -3,6 +3,8 @@ Bayesian learning for Probit models
 
 Dario Garcia
 '''
+import numpy as np
+import scipy.stats as stats
 
 def gibbsSampling(X,y,mu_0=None,sigma_0=None,NUM_SAMPLES=500):
     '''
