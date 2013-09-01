@@ -14,10 +14,14 @@ Dario Garcia
 # TODO:
 # 1 - Only resample from the active arm
 # 2 - Fast version: Get one sample from each arm and decide according to that single sample
+# 3 - Learning can be made sequential: We only need to update the posterior with
+# the new observation, not use all the history (we only need to use the posterior
+# sample mean and covariance as priors for the next iteration)
 import scipy.stats as stats
 import numpy as np
 from numpy.random import rand  as rand
 import bayesProbit
+import pylab as pl
 
 # Experiment setup
 # Success probability model for each arm
@@ -39,6 +43,7 @@ def experiment(NUM_ARMS = 3, D = 2, NUM_OBS = 100, NUM_SAMPLES = 500, BURNOUT = 
     arm_data = dict()
     for arm in range(NUM_ARMS):
         arm_data[arm] = {'feat':np.empty((D,0)),'reward':np.empty((0))}
+    play_counts = np.zeros(NUM_ARMS)
 
     # Main loop
     for it in range(NUM_OBS):
@@ -87,6 +92,7 @@ def experiment(NUM_ARMS = 3, D = 2, NUM_OBS = 100, NUM_SAMPLES = 500, BURNOUT = 
         aux = rand(1)
         chosen_arm = np.searchsorted(cum_post,aux)[0]
         print 'Choosing arm %d' % chosen_arm    
+        play_counts[chosen_arm] += 1
         # Obtain the reward
         reward = stats.bernoulli.rvs(theta[chosen_arm])    
         reward_vector[it] = reward
@@ -99,5 +105,9 @@ def experiment(NUM_ARMS = 3, D = 2, NUM_OBS = 100, NUM_SAMPLES = 500, BURNOUT = 
         print "Cumulative reward: %d" % np.sum(reward_vector[:it+1])
         print "Cumulative expected regret: %.3f" % np.sum(regret)
         print "Cumulative expected random regret: %.3f" % np.sum(random_regret)
-
+        print "Play counts: "
+        print play_counts
+        pl.plot(cumsum(regret))
+        pl.plot(cumsum(random_regret))
+        pl.legend(['Regret','Random regret'])
         

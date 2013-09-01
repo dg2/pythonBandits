@@ -61,3 +61,4 @@ for it in range(NUM_OBS):
     regret[it] = np.sum(tries*(np.max(theta)-theta))
     print "Cumulative reward: %d" % np.sum(reward_vector[:it+1])
     print "Cumulative expected regret: %.3f" % regret[it]
+    print "Cumulative random regret: %.3f" % (it*(np.max(theta)-np.mean(theta)))
