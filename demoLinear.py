@@ -7,7 +7,7 @@ arm the estimated probability of that arm being the optimal one (given
 the observations so far)
 
 Here we implement that idea for a generalized linear bandit (probit model) 
-with side information
+with side information (i.e. contextual bandit). Inspired by 'A Modern Bayesian Look at the multi-armed bandit' (Scott 2010)
 
 Dario Garcia
 '''
@@ -33,11 +33,9 @@ def experiment(NUM_ARMS = 3, D = 2, NUM_OBS = 100, NUM_SAMPLES = 500, BURNOUT = 
     # Initialize vectors
     prior = np.ones(NUM_ARMS)/float(NUM_ARMS)
     post = prior
-    positives = np.zeros(NUM_ARMS)
-    tries = np.zeros(NUM_ARMS)
-    reward_vector = np.zeros(NUM_OBS)
     regret = np.zeros(NUM_OBS)
     random_regret = np.zeros(NUM_OBS)
+    cumulative_reward = 0
     theta_mu = np.zeros(D)
     theta_sigma = prior_sigma*np.eye(D)
     arm_data = dict()
@@ -95,14 +93,14 @@ def experiment(NUM_ARMS = 3, D = 2, NUM_OBS = 100, NUM_SAMPLES = 500, BURNOUT = 
         play_counts[chosen_arm] += 1
         # Obtain the reward
         reward = stats.bernoulli.rvs(theta[chosen_arm])    
-        reward_vector[it] = reward
+        cumulative_reward += reward
         arm_data[chosen_arm]['feat'] = np.hstack((arm_data[chosen_arm]['feat'],feat))
         arm_data[chosen_arm]['reward'] = np.hstack((arm_data[chosen_arm]['reward'],[reward]))
 
         # Report
         regret[it] = max(theta)-theta[chosen_arm]
         random_regret[it] = max(theta)-np.mean(theta)
-        print "Cumulative reward: %d" % np.sum(reward_vector[:it+1])
+        print "Cumulative reward: %d" % cumulative_reward
         print "Cumulative expected regret: %.3f" % np.sum(regret)
         print "Cumulative expected random regret: %.3f" % np.sum(random_regret)
         print "Play counts: "
